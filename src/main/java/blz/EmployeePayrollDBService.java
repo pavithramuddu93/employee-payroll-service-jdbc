@@ -1,6 +1,7 @@
 package blz;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +24,7 @@ public class EmployeePayrollDBService {
     }
 
     /**
-     * Method for create connection to the database.
+     * UC1 - Method for create connection to the database.
      *
      * @return : Connection
      * @throws EmployeePayrollException
@@ -46,7 +47,8 @@ public class EmployeePayrollDBService {
     }
 
     /**
-     * Method for retrieving data from database.
+     * UC2 - Method for retrieving data from database.
+     *
      * @return : list of EmployeePayrollData
      * @throws EmployeePayrollException
      */
@@ -55,9 +57,9 @@ public class EmployeePayrollDBService {
         String query = "SELECT * FROM employee_payroll; ";
         List<EmployeePayrollData> employeePayrollList = new ArrayList<>();
 
-        try(Connection connection = this.getConnection();) {
+        try (Connection connection = this.getConnection();) {
             EmployeePayrollData emData = new EmployeePayrollData();
-            Statement statement =  connection.createStatement();
+            Statement statement = connection.createStatement();
             ResultSet result = statement.executeQuery(query);
             employeePayrollList = this.getEmployeePayrollData(result);
         } catch (SQLException e) {
@@ -67,12 +69,18 @@ public class EmployeePayrollDBService {
 
     }
 
+    /**
+     * UC4 - Method for prepared statement
+     *
+     * @param name
+     * @return
+     */
     public List<EmployeePayrollData> getEmployeeData(String name) {
         List<EmployeePayrollData> employeePayrollList = null;
         if (this.employeePayrollDataStatement == null)
             this.preparedStatementForEmployeeData();
         try {
-            employeePayrollDataStatement.setString(1,name);
+            employeePayrollDataStatement.setString(1, name);
             ResultSet resultSet = employeePayrollDataStatement.executeQuery();
             employeePayrollList = this.getEmployeePayrollData(resultSet);
         } catch (SQLException throwables) {
@@ -81,11 +89,17 @@ public class EmployeePayrollDBService {
         return employeePayrollList;
     }
 
+    /**
+     * UC3 - Method for retrieving data from database. Method to process the resultSet.
+     *
+     * @param resultSet
+     * @return
+     */
     private List<EmployeePayrollData> getEmployeePayrollData(ResultSet resultSet) {
         List<EmployeePayrollData> employeePayrollList = new ArrayList<>();
         EmployeePayrollData emData = new EmployeePayrollData();
         try {
-            while (resultSet.next()){
+            while (resultSet.next()) {
                 emData.setId(resultSet.getInt("id"));
                 emData.setName(resultSet.getString("name"));
                 emData.setGender(resultSet.getString("gender"));
@@ -99,6 +113,9 @@ public class EmployeePayrollDBService {
         return employeePayrollList;
     }
 
+    /**
+     * UC4 - object for preparedStatement
+     */
     private void preparedStatementForEmployeeData() {
         try {
             Connection connection = this.getConnection();
@@ -109,16 +126,33 @@ public class EmployeePayrollDBService {
         }
     }
 
+    /**
+     * UC3 - Method for updating the employee data using Statement
+     *
+     * @param name   : employee name
+     * @param salary : employee new salary
+     * @return
+     * @throws EmployeePayrollException
+     * @throws SQLException
+     */
     public int updateData(String name, double salary) throws EmployeePayrollException, SQLException {
-        return this.updateEmployeeDataUsingStatement(name,salary);
+        return this.updateEmployeeDataUsingStatement(name, salary);
     }
 
+    /**
+     * UC3 - Helper method for updating the employee data using Statement
+     *
+     * @param name   : employee name
+     * @param salary : employee new salary
+     * @return
+     * @throws EmployeePayrollException
+     */
     private int updateEmployeeDataUsingStatement(String name, double salary) throws EmployeePayrollException {
-        String query = String.format("update employee_payroll set salary = %.2f where name = '%s';",salary,name);
-        try(Connection connection = this.getConnection()){
+        String query = String.format("update employee_payroll set salary = %.2f where name = '%s';", salary, name);
+        try (Connection connection = this.getConnection()) {
             Statement statement = connection.createStatement();
             return statement.executeUpdate(query);
-        }catch (SQLException e) {
+        } catch (SQLException e) {
             throw new EmployeePayrollException(e.getMessage());
         }
     }
