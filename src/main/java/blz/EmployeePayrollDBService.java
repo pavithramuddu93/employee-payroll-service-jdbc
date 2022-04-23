@@ -208,13 +208,13 @@ public class EmployeePayrollDBService {
     /**
      * UC7 - Method for add new employee to the database.
      *
-     * @param name : new employee name
-     * @param salary : new employee salary
+     * @param name      : new employee name
+     * @param salary    : new employee salary
      * @param startDate : new employee starting date
-     * @param gender : new employee gender
+     * @param gender    : new employee gender
      * @return
      */
-    public EmployeePayrollData addEmployeeToPayroll(String name, double salary, LocalDate startDate, String gender) throws EmployeePayrollException {
+    public EmployeePayrollData addEmployeeToPayrollUC7(String name, double salary, LocalDate startDate, String gender) throws EmployeePayrollException {
         int employeeId = -1;
         EmployeePayrollData employeePayrollData = new EmployeePayrollData();
         String query = String.format("INSERT INTO employee_payroll (name,gender,salary,start_date)"
@@ -235,6 +235,77 @@ public class EmployeePayrollDBService {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
+        return employeePayrollData;
+    }
+
+    /**
+     * UC8 - Method for adding payroll detail in separate table of database.
+     *
+     * @param name
+     * @param salary
+     * @param startDate
+     * @param gender
+     * @return
+     * @throws EmployeePayrollException
+     */
+    public EmployeePayrollData addEmployeeToPayroll(String name, double salary, LocalDate startDate, String gender) throws EmployeePayrollException, SQLException {
+        int employeeId = -1;
+        Connection connection = null;
+        EmployeePayrollData employeePayrollData = new EmployeePayrollData();
+        try {
+            connection = this.getConnection();
+            connection.setAutoCommit(false);
+        } catch (EmployeePayrollException e) {
+            e.printStackTrace();
+        }
+        try (Statement statement = connection.createStatement()) {
+            String query = String.format("INSERT INTO employee_payroll (name,gender,salary,start_date)"
+                    + "VALUES ('%s','%s','%s','%s')", name, gender, salary, Date.valueOf(startDate));
+            int rowAffected = statement.executeUpdate(query, statement.RETURN_GENERATED_KEYS);
+            if (rowAffected == 1) {
+                ResultSet resultSet = statement.getGeneratedKeys();
+                if (resultSet.next()) employeeId = resultSet.getInt(1);
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            connection.rollback();
+            return employeePayrollData;
+        }
+
+        try (Statement statement = connection.createStatement()) {
+            double deductions = salary * 0.2;
+            double taxablePay = salary - deductions;
+            double tax = taxablePay * 0.1;
+            double netPay = salary - tax;
+            String query = String.format("INSERT INTO payroll_details (employee_id,basic_pay,deductions,taxable_pay,tax,net_pay)"
+                    + "VALUES (%s, %s, %s, %s, %s,%s)", employeeId, salary, deductions, taxablePay, tax, netPay);
+
+            int rowAffected = statement.executeUpdate(query);
+            if (rowAffected == 1) {
+                employeePayrollData.setId(employeeId);
+                employeePayrollData.setName(name);
+                employeePayrollData.setSalary(salary);
+                employeePayrollData.setGender(gender);
+                employeePayrollData.setStartDate(startDate);
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            connection.rollback();
+        }
+        try {
+            connection.commit();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (SQLException throwables) {
+                    throwables.printStackTrace();
+                }
+            }
+        }
+
         return employeePayrollData;
     }
 }
